@@ -1,15 +1,11 @@
 import warnings
 warnings.filterwarnings("ignore")
 
-import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+import streamlit as st
 import pandas as pd
-import os
-import threading
 
 pd.set_option("display.max_columns", None)
 pd.set_option("display.max_colwidth", None)
-
 
 # ==================================================
 # COMMON NORMALIZATION
@@ -131,217 +127,66 @@ def apply_rule2(df):
 
 
 # ==================================================
-# TKINTER UI
+# STREAMLIT UI
 # ==================================================
-class FraudRuleApp(tk.Tk):
-    def __init__(self):
-        super().__init__()
-        self.title("Fraud EWS – Automated Rule Tool")
-        self.geometry("1100x650")
-        self.configure(bg="#F4F6F7")
+st.set_page_config(
+    page_title="Fraud EWS – Automated Rule Tool",
+    layout="wide"
+)
 
-        self.df = None
-        self.stop_flag = False
+st.markdown(
+    "<h2 style='text-align:center;color:#1F4E79;'>Fraud EWS – Automated Rule Tool</h2>",
+    unsafe_allow_html=True
+)
 
-        self.create_ui()
+uploaded_file = st.file_uploader(
+    "📂 Upload CSV File",
+    type=["csv"]
+)
 
-    def create_ui(self):
-    
-        # ---------- WINDOW BACKGROUND ----------
-        self.configure(bg="#EEF2F7")
-    
-        # ---------- HEADER ----------
-        header = tk.Frame(self, bg="#1F4E79", height=65)
-        header.pack(fill="x")
-    
-        tk.Label(
-            header,
-            text="Fraud EWS – Automated Rule Tool",
-            bg="#1F4E79",
-            fg="white",
-            font=("Segoe UI", 18, "bold")
-        ).pack(pady=14)
-    
-        # ---------- MAIN CARD ----------
-        main = tk.Frame(
-            self,
-            bg="white",
-            bd=1,
-            relief="solid"
-        )
-        main.pack(padx=30, pady=25, fill="both", expand=True)
-    
-        # ---------- UPLOAD SECTION ----------
-        upload_frame = tk.Frame(main, bg="white")
-        upload_frame.pack(pady=10)
-    
-        upload_btn = tk.Button(
-            upload_frame,
-            text="📂 Upload CSV File",
-            font=("Segoe UI", 11, "bold"),
-            bg="#5DADE2",
-            fg="white",
-            activebackground="#3498DB",
-            activeforeground="white",
-            width=22,
-            relief="flat",
-            command=self.upload_file
-        )
-        upload_btn.pack(pady=5)
-    
-        self.file_label = tk.Label(
-            upload_frame,
-            text="No file selected",
-            bg="white",
-            fg="#7F8C8D",
-            font=("Segoe UI", 9, "italic")
-        )
-        self.file_label.pack()
-    
-        # ---------- PREVIEW TITLE ----------
-        tk.Label(
-            main,
-            text="Data Preview (Top 5 Rows)",
-            bg="white",
-            fg="#2C3E50",
-            font=("Segoe UI", 10, "bold")
-        ).pack(anchor="w", padx=10, pady=(15, 5))
-    
-        # ---------- PREVIEW TABLE ----------
-        table_frame = tk.Frame(main, bg="white")
-        table_frame.pack(fill="both", expand=True, padx=10)
-    
-        self.tree = ttk.Treeview(table_frame, show="headings")
-        self.tree.pack(side="left", fill="both", expand=True)
-    
-        vsb = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
-        hsb = ttk.Scrollbar(main, orient="horizontal", command=self.tree.xview)
-    
-        self.tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
-    
-        vsb.pack(side="right", fill="y")
-        hsb.pack(fill="x", padx=10)
-    
-        # ---------- BUTTON STYLES ----------
-        def styled_button(parent, text, bg, cmd):
-            btn = tk.Button(
-                parent,
-                text=text,
-                font=("Segoe UI", 10, "bold"),
-                bg=bg,
-                fg="white",
-                width=14,
-                relief="flat",
-                activebackground=bg,
-                activeforeground="white",
-                command=cmd
-            )
-            btn.bind("<Enter>", lambda e: btn.config(bg="#34495E"))
-            btn.bind("<Leave>", lambda e: btn.config(bg=bg))
-            return btn
-    
-        # ---------- ACTION BUTTONS ----------
-        btns = tk.Frame(main, bg="white")
-        btns.pack(pady=15)
-    
-        styled_button(btns, "🚀 Rule 1", "#2E86C1", self.run_rule1).grid(row=0, column=0, padx=6)
-        styled_button(btns, "⚡ Rule 2", "#17A589", self.run_rule2).grid(row=0, column=1, padx=6)
-        styled_button(btns, "🔄 Reset", "#F39C12", self.reset_app).grid(row=0, column=2, padx=6)
-        styled_button(btns, "⛔ Stop", "#C0392B", self.stop_processing).grid(row=0, column=3, padx=6)
-    
-        # ---------- STATUS BAR ----------
-        self.status = tk.Label(
-            main,
-            text="Status: Waiting for file upload",
-            bg="#F4F6F7",
-            fg="#1F618D",
-            font=("Segoe UI", 9, "italic"),
-            anchor="w"
-        )
-        self.status.pack(fill="x", padx=5, pady=(10, 0))
+if uploaded_file:
+    df = pd.read_csv(uploaded_file, encoding="latin1")
+    st.success("File uploaded successfully ✅")
 
-    # ---------- FOOTER ----------
-        footer = tk.Frame(self, bg="#1F4E79", height=30)
-        footer.pack(fill="x", side="bottom")
-        
-        tk.Label(
-            footer,
-            text="Developed by Faiz Khan | Risk",
-            bg="#1F4E79",
-            fg="white",
-            font=("Segoe UI", 9, "italic")
-        ).pack(pady=6)
+    st.subheader("🔍 Data Preview (Top 5 Rows)")
+    st.dataframe(df.head(), use_container_width=True)
 
+    col1, col2 = st.columns(2)
 
-    # ------------------------------
-    # FUNCTIONS
-    # ------------------------------
-    def upload_file(self):
-        path = filedialog.askopenfilename(filetypes=[("CSV Files", "*.csv")])
-        if not path:
-            return
+    with col1:
+        if st.button("🚀 Run Rule 1"):
+            try:
+                res1 = apply_rule1(df)
+                st.success("Rule 1 completed ✅")
+                st.dataframe(res1, use_container_width=True)
 
-        self.df = pd.read_csv(path, encoding="latin1")
-        self.file_label.config(text=os.path.basename(path), fg="black")
-        self.status.config(text="Status: File uploaded successfully ✅")
-        self.load_preview(self.df.head(5))
+                st.download_button(
+                    "⬇️ Download Rule 1 Output",
+                    data=res1.to_excel(index=False),
+                    file_name="Rule_1_Output.xlsx"
+                )
+            except Exception as e:
+                st.error(str(e))
 
-    def load_preview(self, df):
-        self.tree.delete(*self.tree.get_children())
-        self.tree["columns"] = list(df.columns)
+    with col2:
+        if st.button("⚡ Run Rule 2"):
+            try:
+                res2 = apply_rule2(df)
+                st.success("Rule 2 completed ✅")
+                st.dataframe(res2, use_container_width=True)
 
-        for col in df.columns:
-            self.tree.heading(col, text=col)
-            self.tree.column(col, width=120, anchor="center")
+                st.download_button(
+                    "⬇️ Download Rule 2 Output",
+                    data=res2.to_excel(index=False),
+                    file_name="Rule_2_Output.xlsx"
+                )
+            except Exception as e:
+                st.error(str(e))
 
-        for _, row in df.iterrows():
-            self.tree.insert("", "end", values=list(row))
+else:
+    st.info("Please upload a CSV file to begin.")
 
-    def save_output(self, df, name):
-        path = filedialog.asksaveasfilename(defaultextension=".xlsx", initialfile=name)
-        if path:
-            df.to_excel(path, index=False)
-            messagebox.showinfo("Success", "File saved successfully ✅")
-
-    def run_rule1(self):
-        try:
-            self.status.config(text="Processing Rule 1...")
-            res = apply_rule1(self.df)
-            self.save_output(res, "Rule_1_Output.xlsx")
-            self.status.config(text="Rule 1 completed ✅")
-        except Exception as e:
-            messagebox.showerror("Error", str(e))
-
-    def run_rule2(self):
-        try:
-            self.status.config(text="Processing Rule 2...")
-            res = apply_rule2(self.df)
-            self.save_output(res, "Rule_2_Output.xlsx")
-            self.status.config(text="Rule 2 completed ✅")
-        except Exception as e:
-            messagebox.showerror("Error", str(e))
-
-    def reset_app(self):
-        self.df = None
-    
-        # Clear table rows
-        self.tree.delete(*self.tree.get_children())
-    
-        # 🔑 Clear table columns (this removes header view)
-        self.tree["columns"] = ()
-    
-        self.file_label.config(text="No file selected", fg="gray")
-        self.status.config(text="Status: Reset completed 🔄")
-
-
-    def stop_processing(self):
-        self.stop_flag = True
-        self.status.config(text="Processing stopped ⛔")
-
-
-# ==================================================
-# START APP
-# ==================================================
-if __name__ == "__main__":
-    app = FraudRuleApp()
-    app.mainloop()
+st.markdown(
+    "<hr><p style='text-align:center;font-size:13px;'>Developed by <b>Faiz Khan</b> | Risk</p>",
+    unsafe_allow_html=True
+)
